@@ -368,9 +368,9 @@ KRON_KEY = {
 def load_lora(name, lora_on_disk):
     print('locon load lora method')
     lora = LoraModule(name, lora_on_disk)
-    lora.mtime = os.path.getmtime(lora_on_disk.filename)
+    lora.mtime = os.path.getmtime(lora_on_disk)
 
-    sd = sd_models.read_state_dict(lora_on_disk.filename)
+    sd = sd_models.read_state_dict(lora_on_disk)
     is_sd2 = 'model_transformer_resblocks' in shared.sd_model.lora_layer_mapping
 
     keys_failed_to_match = []
