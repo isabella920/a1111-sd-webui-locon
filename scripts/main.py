@@ -160,7 +160,6 @@ class LoraModule:
         self.mtime = None
         
         self.mentioned_name = None
-        """the text that was used to add lora to prompt - can be either name or an alias"""
 
 
 class FakeModule(torch.nn.Module):
@@ -365,12 +364,35 @@ KRON_KEY = {
     "lokr_w2_b",
 }
 
-def load_lora(name, lora_on_disk):
-    print('locon load lora method')
-    lora = LoraModule(name, lora_on_disk)
-    lora.mtime = os.path.getmtime(lora_on_disk)
+def assign_lora_names_to_compvis_modules(sd_model):
+    lora_layer_mapping = {}
 
-    sd = sd_models.read_state_dict(lora_on_disk)
+    for name, module in shared.sd_model.cond_stage_model.wrapped.named_modules():
+        lora_name = name.replace(".", "_")
+        lora_layer_mapping[lora_name] = module
+        module.lora_layer_name = lora_name
+
+    for name, module in shared.sd_model.model.named_modules():
+        lora_name = name.replace(".", "_")
+        lora_layer_mapping[lora_name] = module
+        module.lora_layer_name = lora_name
+
+    sd_model.lora_layer_mapping = lora_layer_mapping
+
+def load_lora(name, filename):
+    print('locon load lora method')
+    lora_on_disk = filename
+    if isinstance(filename, str):
+        lora_on_disk = LoraOnDisk(name, filename)
+    lora = LoraModule(name, lora_on_disk)
+    lora.mtime = os.path.getmtime(lora_on_disk.filename)
+
+    sd = sd_models.read_state_dict(lora_on_disk.filename)
+    
+    # this should not be needed but is here as an emergency fix for an unknown error people are experiencing in 1.2.0
+    if not hasattr(shared.sd_model, 'lora_layer_mapping'):
+        assign_lora_names_to_compvis_modules(shared.sd_model)
+    
     is_sd2 = 'model_transformer_resblocks' in shared.sd_model.lora_layer_mapping
 
     keys_failed_to_match = []
